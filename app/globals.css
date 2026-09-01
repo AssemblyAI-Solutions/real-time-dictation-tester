@@ -1,26 +1,60 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-ink-950: #080c17;
+  --color-ink-900: #0d1322;
+  --color-ink-850: #121a2c;
+  --color-ink-800: #182138;
+  --color-ink-750: #1e2942;
+  --color-ink-700: #26324f;
+  --color-ink-600: #33415f;
+  --color-ink-500: #4a5a7c;
+  --color-ink-400: #6b7c9e;
+  --color-ink-300: #94a3bd;
+  --color-ink-200: #c3cddd;
+
+  --color-accent: #6f8cff;
+  --color-accent-dim: #3d4f9e;
+  --color-live: #ff5f56;
+  --color-good: #3ecf8e;
+  --color-warn: #f0b429;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-ink-950);
+  color: var(--color-ink-200);
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Thin, unobtrusive scrollbars to match the dark chrome. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-700) transparent;
+}
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-ink-700);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes pulse-rec {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.rec-dot {
+  animation: pulse-rec 1.2s ease-in-out infinite;
 }
