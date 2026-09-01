@@ -1,7 +1,6 @@
 "use client";
 
 import { mean, percentile, type Metrics } from "@/lib/metrics";
-import type { DictationMetrics } from "@/hooks/useDictation";
 import { Pill } from "./Controls";
 
 function Stat({
@@ -22,7 +21,7 @@ function Stat({
   const toneClass =
     tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : tone === "bad" ? "text-live" : "text-ink-100";
   return (
-    <div className="rounded border border-ink-800 bg-ink-900/60 px-2 py-1.5">
+    <div className="rounded-lg border border-ink-800 bg-ink-850/60 px-2 py-1.5">
       <div className="text-[10px] leading-tight text-ink-500">{label}</div>
       <div className={`font-mono ${big ? "text-lg" : "text-sm"} ${toneClass}`}>
         {value ?? "—"}
@@ -104,73 +103,6 @@ export function StreamingMetrics({ metrics: m }: { metrics: Metrics }) {
         rows is the window in which text on screen could still change. Word indices are matched
         between unformatted partials and the formatted final, so entity rewrites
         (&ldquo;five five five&rdquo; → &ldquo;555&rdquo;) can shift alignment by a word.
-      </p>
-    </div>
-  );
-}
-
-export function DictationMetricsView({ metrics: m }: { metrics: DictationMetrics }) {
-  const tail = m.results.map((r) => r.tailLagMs);
-  const head = m.results.map((r) => r.headLagMs);
-  const server = m.results.map((r) => r.requestTimeMs).filter((v): v is number => v != null);
-  const sync = m.results.map((r) => r.syncTimeMs).filter((v): v is number => v != null);
-  const durations = m.results.map((r) => r.audioDurationMs);
-
-  return (
-    <div className="space-y-2 p-2">
-      <div className="grid grid-cols-2 gap-1.5">
-        <Stat
-          label="Last-word lag p50 — clip end → text on screen"
-          value={round(percentile(tail, 50))}
-          unit="ms"
-          big
-          tone={
-            percentile(tail, 50) == null
-              ? undefined
-              : percentile(tail, 50)! > 1200
-                ? "bad"
-                : percentile(tail, 50)! > 600
-                  ? "warn"
-                  : "good"
-          }
-          hint="best case: the word you just said"
-        />
-        <Stat
-          label="First-word lag p50 — clip start → text on screen"
-          value={round(percentile(head, 50))}
-          unit="ms"
-          big
-          tone={
-            percentile(head, 50) == null
-              ? undefined
-              : percentile(head, 50)! > 2500
-                ? "bad"
-                : percentile(head, 50)! > 1200
-                  ? "warn"
-                  : "good"
-          }
-          hint="worst case: the word that opened the clip"
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-1.5">
-        <Stat label="Server request_time p50" value={round(percentile(server, 50))} unit="ms" />
-        <Stat label="sync_time p50" value={round(percentile(sync, 50))} unit="ms" hint="transcription only" />
-        <Stat label="Clip length mean" value={round(mean(durations))} unit="ms" />
-      </div>
-
-      <div className="flex flex-wrap gap-1">
-        <Pill>clips {m.clips}</Pill>
-        {m.errors > 0 && <Pill tone="bad">errors {m.errors}</Pill>}
-        {m.results.some((r) => r.llmError) && (
-          <Pill tone="warn">llm errors {m.results.filter((r) => r.llmError).length}</Pill>
-        )}
-      </div>
-
-      <p className="pt-1 text-[10px] leading-relaxed text-ink-500">
-        Chunked HTTP can&apos;t be word-by-word — a clip&apos;s text arrives all at once. The two
-        numbers above are the honest bounds: shorter clips pull first-word lag down and cost more
-        requests, longer clips are cheaper and give the model more context.
       </p>
     </div>
   );

@@ -44,7 +44,7 @@ export function EventLog({ log }: { log: LogEntry[] }) {
               key={f}
               onClick={() => setFilter(f)}
               className={`rounded px-1.5 py-0.5 text-[10px] transition ${
-                filter === f ? "bg-ink-700 text-ink-100" : "text-ink-500 hover:text-ink-300"
+                filter === f ? "bg-ink-800 text-ink-200" : "text-ink-500 hover:text-ink-300"
               }`}
             >
               {f}
@@ -53,7 +53,7 @@ export function EventLog({ log }: { log: LogEntry[] }) {
           <button
             onClick={() => setFollow((v) => !v)}
             className={`rounded px-1.5 py-0.5 text-[10px] transition ${
-              follow ? "bg-accent/20 text-accent" : "text-ink-500 hover:text-ink-300"
+              follow ? "bg-accent-soft text-accent" : "text-ink-500 hover:text-ink-300"
             }`}
             title="Follow tail"
           >
@@ -69,7 +69,7 @@ export function EventLog({ log }: { log: LogEntry[] }) {
           </p>
         )}
         {visible.map((entry) => (
-          <div key={entry.id} className="flex gap-1.5 border-b border-ink-900/70 py-0.5">
+          <div key={entry.id} className="flex gap-1.5 border-b border-ink-800/70 py-0.5">
             <span className="w-12 shrink-0 text-right text-ink-600">
               {(entry.atMs / 1000).toFixed(2)}s
             </span>

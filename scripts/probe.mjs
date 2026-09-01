@@ -12,7 +12,7 @@ const rmsGate = Number(extra.rms ?? 0.01);
 delete extra.force; delete extra.forceSilence; delete extra.rms;
 
 const fs = await import("node:fs");
-const buf = fs.readFileSync(process.env.WAV ?? "dictation.wav");
+const buf = fs.readFileSync(process.env.WAV ?? "fixtures/continuous.wav");
 const pcm = buf.subarray(44); // skip WAV header
 const RATE = 16000, CHUNK_MS = 80;
 const bytesPerChunk = (RATE * 2 * CHUNK_MS) / 1000;

@@ -3,7 +3,6 @@
 import { SPOKEN_RULES } from "@/lib/punctuation";
 import {
   LANGUAGES,
-  type DictationParams,
   type PunctuationSettings,
   type DeliveryMode,
   type Mode,
@@ -38,24 +37,16 @@ const DELIVERY_LABELS: Record<DeliveryMode, { title: string; blurb: string }> = 
 };
 
 export function ParamPanel({
-  engine,
-  onEngineChange,
   streaming,
   onStreamingChange,
-  dictation,
-  onDictationChange,
   punctuation,
   onPunctuationChange,
   live,
   onApplyMidStream,
   onForceEndpoint,
 }: {
-  engine: "streaming" | "dictation";
-  onEngineChange: (e: "streaming" | "dictation") => void;
   streaming: StreamingParams;
   onStreamingChange: (p: StreamingParams) => void;
-  dictation: DictationParams;
-  onDictationChange: (p: DictationParams) => void;
   punctuation: PunctuationSettings;
   onPunctuationChange: (p: PunctuationSettings) => void;
   live: boolean;
@@ -70,43 +61,20 @@ export function ParamPanel({
   const setPunct = <K extends keyof PunctuationSettings>(key: K, value: PunctuationSettings[K]) =>
     onPunctuationChange({ ...punct, [key]: value });
 
-  const d = dictation;
-  const setD = <K extends keyof DictationParams>(key: K, value: DictationParams[K]) =>
-    onDictationChange({ ...d, [key]: value });
-
   const isPro = s.speech_model === "universal-3-5-pro";
   const isUS = !isPro;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Engine switch */}
-      <div className="shrink-0 border-b border-ink-800 p-2">
-        <div className="grid grid-cols-2 gap-1 rounded bg-ink-900 p-1">
-          {(["streaming", "dictation"] as const).map((e) => (
-            <button
-              key={e}
-              onClick={() => onEngineChange(e)}
-              disabled={live}
-              className={`rounded px-2 py-1.5 text-[11px] font-medium transition disabled:cursor-not-allowed ${
-                engine === e
-                  ? "bg-accent/20 text-ink-100 ring-1 ring-accent-dim"
-                  : "text-ink-400 hover:text-ink-200"
-              }`}
-            >
-              {e === "streaming" ? "U-3.5 Pro Streaming" : "Dictation API"}
-            </button>
-          ))}
-        </div>
-        <p className="mt-1.5 px-1 text-[10px] leading-relaxed text-ink-500">
-          {engine === "streaming"
-            ? "WebSocket, wss://…/v3/ws. Continuous session, turn-based results."
-            : "One-shot HTTP, POST dictation.assemblyai.com/transcribe. Clips up to 120s, phrase-at-a-time by construction."}
+      <div className="shrink-0 border-b border-ink-800 px-3 py-2">
+        <div className="text-[11px] font-semibold text-ink-200">Universal-3.5 Pro Streaming</div>
+        <p className="mt-0.5 text-[10px] leading-relaxed text-ink-500">
+          WebSocket, wss://&hellip;/v3/ws. Continuous session, turn-based results.
         </p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {engine === "streaming" ? (
-          <>
+
             <Section
               title="Presets"
               hint="Each one is a different answer to “get words on screen sooner without rewriting them”."
@@ -117,7 +85,7 @@ export function ParamPanel({
                     key={preset.id}
                     disabled={live}
                     onClick={() => onStreamingChange(applyPreset(s, preset))}
-                    className="block w-full rounded border border-ink-700 px-2 py-1.5 text-left transition hover:border-accent-dim hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="block w-full rounded border border-ink-700 px-2 py-1.5 text-left transition hover:border-accent hover:bg-accent-soft/40 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <span className="block text-[11px] font-medium text-ink-100">{preset.name}</span>
                     <span className="mt-0.5 block text-[10px] leading-relaxed text-ink-500">
@@ -139,7 +107,7 @@ export function ParamPanel({
                     onClick={() => set("deliveryMode", m)}
                     className={`block w-full rounded border px-2 py-1.5 text-left transition ${
                       s.deliveryMode === m
-                        ? "border-accent-dim bg-accent/10"
+                        ? "border-accent bg-accent-soft/60"
                         : "border-ink-700 hover:border-ink-600"
                     }`}
                   >
@@ -397,98 +365,7 @@ export function ParamPanel({
                 </Row>
               )}
             </Section>
-          </>
-        ) : (
-          <>
-            <Section
-              title="Clip segmentation"
-              hint="Dictation is one-shot HTTP, so the client decides where clips start and end. That choice, not the model, sets perceived latency — and a clip cut mid-word gets garbled, so cut in the gaps."
-            >
-              <Row label="chunking">
-                <Select<"vad" | "cadence">
-                  value={d.chunking}
-                  onChange={(v) => setD("chunking", v)}
-                  options={[
-                    { value: "vad", label: "vad — cut on local silence" },
-                    { value: "cadence", label: "cadence — cut on a fixed clock" },
-                  ]}
-                />
-              </Row>
-              {d.chunking === "vad" ? (
-                <>
-                  <Row label="chunkSilenceMs" hint="silence that closes a clip">
-                    <Num value={d.chunkSilenceMs} onChange={(v) => setD("chunkSilenceMs", v)} min={80} max={2000} step={10} />
-                  </Row>
-                  {d.chunkSilenceMs > 200 && (
-                    <p className="text-[10px] leading-relaxed text-warn/80">
-                      Above ~200ms this only finds sentence boundaries. During unbroken speech no
-                      gap qualifies, so clips run until maxClipMs and the screen sits empty until then.
-                    </p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Row label="cadenceMs" hint="clip length">
-                    <Num value={d.cadenceMs} onChange={(v) => setD("cadenceMs", v)} min={300} max={5000} step={100} />
-                  </Row>
-                  <p className="text-[10px] leading-relaxed text-warn/80">
-                    Cadence guarantees a rhythm but ignores where the words are, so cuts land
-                    mid-word and those fragments transcribe poorly. Prefer vad.
-                  </p>
-                </>
-              )}
-              <Row label="maxClipMs" hint="backstop, not the normal path">
-                <Num value={d.maxClipMs} onChange={(v) => setD("maxClipMs", v)} min={1000} max={120000} step={1000} />
-              </Row>
-              <Row label="minClipMs" hint="drop clips shorter than this">
-                <Num value={d.minClipMs} onChange={(v) => setD("minClipMs", v)} min={100} max={2000} step={50} />
-              </Row>
-              <Row label="silenceRms" hint="local VAD threshold">
-                <Num value={d.silenceRms} onChange={(v) => setD("silenceRms", v)} min={0.002} max={0.08} step={0.002} />
-              </Row>
-            </Section>
 
-            <Section title="Transcription context">
-              <Row label="language_codes">
-                <TagInput value={d.language_codes} onChange={(v) => setD("language_codes", v)} placeholder="en" />
-              </Row>
-              <Row label="prompt" hint="max 4096 chars">
-                <TextArea value={d.prompt} onChange={(v) => setD("prompt", v)} maxLength={4096} rows={5} />
-              </Row>
-              <Row label="word_boost">
-                <TagInput value={d.word_boost} onChange={(v) => setD("word_boost", v)} placeholder="adenopathy, steatosis…" />
-              </Row>
-              <Toggle
-                label="conversation_context"
-                hint="Feed previously dictated text back as prior turns for continuity across clips."
-                value={d.useConversationContext}
-                onChange={(v) => setD("useConversationContext", v)}
-              />
-            </Section>
-
-            <Section
-              title="LLM rewrite"
-              hint="Rewrites the transcript after it is written down. 5s internal deadline; on timeout you still get the verbatim text."
-              defaultOpen={false}
-            >
-              <Toggle label="llm.instruction" value={d.llmEnabled} onChange={(v) => setD("llmEnabled", v)} />
-              <TextArea
-                value={d.llmInstruction}
-                onChange={(v) => setD("llmInstruction", v)}
-                maxLength={2048}
-                rows={4}
-                disabled={!d.llmEnabled}
-                placeholder="Convert spoken punctuation commands into marks and remove filler words."
-              />
-              <p className="text-[10px] leading-relaxed text-ink-500">
-                Adds a round trip per clip. Describe only the transformation — output-format and
-                injection rules are enforced by the service.
-              </p>
-            </Section>
-          </>
-        )}
-
-        {/* Applies to both engines, so it sits outside the engine branch. */}
         <Section
           title="Spoken punctuation"
           hint="Universal-3.5 Pro converts dictated punctuation itself and consumes the command words, so most applications want “model”. The other modes are for taking control back."
@@ -524,7 +401,7 @@ export function ParamPanel({
 
           {(punct.mode === "spoken" || punct.mode === "assist") && (
             <>
-              <div className="rounded border border-ink-700 bg-ink-950/60 p-2">
+              <div className="rounded-lg border border-ink-700 bg-ink-850 p-2">
                 <div className="mb-1 text-[10px] uppercase tracking-wider text-ink-500">
                   Say these
                 </div>
@@ -592,24 +469,22 @@ export function ParamPanel({
         </Section>
       </div>
 
-      {engine === "streaming" && (
-        <div className="shrink-0 space-y-1 border-t border-ink-800 p-2">
+      <div className="shrink-0 space-y-1 border-t border-ink-800 p-2">
           <button
             onClick={onApplyMidStream}
             disabled={!live}
-            className="w-full rounded border border-ink-700 px-2 py-1.5 text-[11px] text-ink-200 transition hover:border-accent-dim hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full rounded border border-ink-700 px-2 py-1.5 text-[11px] text-ink-200 transition hover:border-accent hover:bg-accent-soft/40 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Push UpdateConfiguration
           </button>
           <button
             onClick={onForceEndpoint}
             disabled={!live}
-            className="w-full rounded border border-ink-700 px-2 py-1.5 text-[11px] text-ink-200 transition hover:border-accent-dim hover:bg-accent/5 disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full rounded border border-ink-700 px-2 py-1.5 text-[11px] text-ink-200 transition hover:border-accent hover:bg-accent-soft/40 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Send ForceEndpoint now
           </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

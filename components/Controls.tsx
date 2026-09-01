@@ -18,7 +18,7 @@ export function Section({
     <div className="border-b border-ink-800">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-ink-850/60"
+        className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-ink-850"
       >
         <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-300">
           {title}
@@ -68,7 +68,7 @@ export function Toggle({
         disabled
           ? "cursor-not-allowed border-ink-800 opacity-40"
           : value
-            ? "border-accent-dim bg-accent/10"
+            ? "border-accent bg-accent-soft/60"
             : "border-ink-700 hover:border-ink-600"
       }`}
     >
@@ -107,7 +107,7 @@ export function Select<T extends string>({
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value as T)}
-      className="w-full rounded border border-ink-700 bg-ink-900 px-2 py-1.5 font-mono text-[11px] text-ink-200 outline-none focus:border-accent-dim disabled:opacity-40"
+      className="w-full rounded-md border border-ink-700 bg-ink-900 px-2 py-1.5 font-mono text-[11px] text-ink-200 outline-none focus:border-accent disabled:opacity-40"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>
@@ -172,7 +172,7 @@ export function NumberField({
         disabled={disabled || !active}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
-        className="w-16 shrink-0 rounded border border-ink-700 bg-ink-900 px-1.5 py-0.5 text-right font-mono text-[11px] text-ink-200 outline-none focus:border-accent-dim disabled:opacity-30"
+        className="w-16 shrink-0 rounded-md border border-ink-700 bg-ink-900 px-1.5 py-0.5 text-right font-mono text-[11px] text-ink-200 outline-none focus:border-accent disabled:opacity-30"
       />
     </div>
   );
@@ -213,7 +213,7 @@ export function Num({
         disabled={disabled}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-16 shrink-0 rounded border border-ink-700 bg-ink-900 px-1.5 py-0.5 text-right font-mono text-[11px] text-ink-200 outline-none focus:border-accent-dim"
+        className="w-16 shrink-0 rounded-md border border-ink-700 bg-ink-900 px-1.5 py-0.5 text-right font-mono text-[11px] text-ink-200 outline-none focus:border-accent"
       />
     </div>
   );
@@ -243,7 +243,7 @@ export function TextArea({
         placeholder={placeholder}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full resize-y rounded border border-ink-700 bg-ink-900 px-2 py-1.5 text-[11px] leading-relaxed text-ink-200 outline-none placeholder:text-ink-600 focus:border-accent-dim disabled:opacity-40"
+        className="w-full resize-y rounded-md border border-ink-700 bg-ink-900 px-2 py-1.5 text-[11px] leading-relaxed text-ink-200 outline-none placeholder:text-ink-600 focus:border-accent disabled:opacity-40"
       />
       {maxLength && (
         <div className="mt-0.5 text-right text-[10px] text-ink-600">
@@ -313,7 +313,7 @@ export function TagInput({
             commit();
           }
         }}
-        className="w-full rounded border border-ink-700 bg-ink-900 px-2 py-1.5 font-mono text-[11px] text-ink-200 outline-none placeholder:text-ink-600 focus:border-accent-dim"
+        className="w-full rounded-md border border-ink-700 bg-ink-900 px-2 py-1.5 font-mono text-[11px] text-ink-200 outline-none placeholder:text-ink-600 focus:border-accent"
       />
       {max && (
         <div className="mt-0.5 text-right text-[10px] text-ink-600">

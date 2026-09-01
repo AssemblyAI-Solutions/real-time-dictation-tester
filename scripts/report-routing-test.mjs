@@ -40,7 +40,7 @@ function boundariesMatch(actual, want) {
   return a[0] === w[0] && a[a.length - 1] === w[w.length - 1] && a.length === w.length;
 }
 
-async function run({ wav, marks: marksFile, pressOffsetMs, label, expect, engine }) {
+async function run({ wav, marks: marksFile, pressOffsetMs, label, expect }) {
   const marks = JSON.parse(fs.readFileSync(`${DIR}/${marksFile}`));
   const browser = await chromium.launch({
     executablePath: CHROME,
@@ -53,8 +53,7 @@ async function run({ wav, marks: marksFile, pressOffsetMs, label, expect, engine
   })).newPage();
   page.on("pageerror", (e) => console.log(`  [PAGEERROR] ${e.message}`));
   await page.goto(BASE, { waitUntil: "networkidle" });
-  if (engine === "dictation") await page.getByRole("button", { name: "Dictation API" }).click();
-  else await page.getByRole("button", { name: /Stable-commit/ }).first().click();
+  await page.getByRole("button", { name: /Stable-commit/ }).first().click();
   await page.getByText("EXAMINATION:", { exact: true }).click();
 
   const t0 = Date.now();
@@ -69,10 +68,12 @@ async function run({ wav, marks: marksFile, pressOffsetMs, label, expect, engine
   await page.waitForTimeout(3000);
 
   const got = await page.evaluate(() =>
-    Object.fromEntries([...document.querySelectorAll("div.rounded-md.border-2 div.group")].map((d) => {
-      const label = d.querySelector("span")?.textContent?.replace(/:$/, "") ?? "";
+    Object.fromEntries([...document.querySelectorAll("[data-field]")].map((d) => {
+      const label = d.getAttribute("data-field-label") ?? "";
       const ta = d.querySelector("textarea");
-      return [label, (ta ? ta.value : d.querySelectorAll("span")[1]?.textContent ?? "").trim()];
+      if (ta) return [label, ta.value.trim()];
+      const spans = d.querySelectorAll("span");
+      return [label, (spans[spans.length - 1]?.textContent ?? "").trim()];
     })));
   await browser.close();
 
@@ -114,12 +115,6 @@ failures += await run({
 failures += await run({
   wav: "report.wav", marks: "report.json", pressOffsetMs: 250,
   label: "NONSTOP streaming · read straight through, no pause at switches",
-});
-// Dictation cuts the audio buffer itself at the keystroke, so the boundary is
-// exact regardless of where the words fall.
-failures += await run({
-  wav: "report.wav", marks: "report.json", pressOffsetMs: 250, engine: "dictation", expect: 11,
-  label: "NONSTOP dictation · client cuts the clip at the keystroke",
 });
 
 console.log(

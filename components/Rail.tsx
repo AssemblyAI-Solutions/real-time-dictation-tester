@@ -1,6 +1,6 @@
 "use client";
 
-/** Decorative left rail, standing in for a reporting application's icon column. */
+/** Left rail: the section icons a reporting application would have. Decorative. */
 const ICONS = ["search", "list", "folder", "monitor", "add", "waveform"] as const;
 
 const PATHS: Record<string, string> = {
@@ -14,24 +14,30 @@ const PATHS: Record<string, string> = {
 
 export function Rail({ active }: { active: number }) {
   return (
-    <div className="flex w-11 shrink-0 flex-col items-center gap-1 border-r border-ink-800 bg-ink-900 py-2">
-      <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-dim text-[11px] font-bold text-white">
-        S
-      </div>
+    <div className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-ink-800 bg-ink-900 py-3">
       {ICONS.map((icon, i) => (
         <div
           key={icon}
-          className={`flex h-8 w-8 items-center justify-center rounded ${
-            i === active ? "bg-accent/20 text-accent" : "text-ink-500"
+          className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+            i === active ? "bg-accent-soft text-accent" : "text-ink-500"
           }`}
         >
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          >
             <path d={PATHS[icon]} />
           </svg>
         </div>
       ))}
-      <div className="mt-auto flex h-7 w-7 items-center justify-center rounded-full bg-ink-700 text-[10px] font-semibold text-ink-300">
-        ML
+
+      <div className="mt-auto flex h-7 w-7 items-center justify-center rounded-full bg-ink-800 text-[10px] font-semibold text-ink-400">
+        DR
       </div>
     </div>
   );

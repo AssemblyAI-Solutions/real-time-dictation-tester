@@ -6,26 +6,20 @@ import { ParamPanel } from "@/components/ParamPanel";
 import { Rail } from "@/components/Rail";
 import { ReportEditor } from "@/components/ReportEditor";
 import { ScriptPanel } from "@/components/ScriptPanel";
-import { DictationMetricsView, StreamingMetrics } from "@/components/Metrics";
-import { useDictation } from "@/hooks/useDictation";
+import { StreamingMetrics } from "@/components/Metrics";
 import { useLatest } from "@/hooks/useLatest";
 import { useStreaming } from "@/hooks/useStreaming";
 import { appendDictated, convertSpokenPunctuation } from "@/lib/punctuation";
 import {
-  DEFAULT_DICTATION,
   DEFAULT_PUNCTUATION,
   DEFAULT_STREAMING,
-  type Engine,
-  type DictationParams,
   type PunctuationSettings,
   type StreamingParams,
 } from "@/lib/params";
 import { DICTATABLE_FIELDS, detectCommand, emptyReport } from "@/lib/report";
 
 export default function Page() {
-  const [engine, setEngine] = useState<Engine>("streaming");
   const [streamingParams, setStreamingParams] = useState<StreamingParams>(DEFAULT_STREAMING);
-  const [dictationParams, setDictationParams] = useState<DictationParams>(DEFAULT_DICTATION);
   const [punctuation, setPunctuation] = useState<PunctuationSettings>(DEFAULT_PUNCTUATION);
 
   const [fields, setFields] = useState<Record<string, string>>(emptyReport);
@@ -120,16 +114,13 @@ export default function Page() {
   const getField = useCallback(() => activeFieldRef.current, [activeFieldRef]);
 
   const streaming = useStreaming({ params: streamingParams, punctuation, onCommit, getField });
-  const dictation = useDictation({ params: dictationParams, onSegment: onCommit, getField });
 
   const noteStreamingField = streaming.noteFieldChange;
-  const noteDictationField = dictation.noteFieldChange;
   useEffect(() => {
-    engineRef.current.noteField =
-      engine === "streaming" ? noteStreamingField : () => noteDictationField();
-  }, [engine, noteStreamingField, noteDictationField]);
+    engineRef.current.noteField = noteStreamingField;
+  }, [noteStreamingField]);
 
-  const active = engine === "streaming" ? streaming : dictation;
+  const active = streaming;
   const isLive = active.status === "live" || active.status === "connecting";
 
   const toggleRecording = useCallback(() => {
@@ -177,8 +168,28 @@ export default function Page() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-ink-950">
-      {/* Patient header */}
-      <header className="flex shrink-0 items-center gap-4 border-b border-ink-800 bg-ink-850 px-4 py-2">
+      {/* Brand strip — this is an AssemblyAI reference app, not a product UI. */}
+      <div className="flex shrink-0 items-center gap-3 border-b border-ink-800 bg-ink-900 px-4 py-1.5">
+        <a href="https://www.assemblyai.com" target="_blank" rel="noreferrer" title="AssemblyAI">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/assemblyai-lockup.svg" alt="AssemblyAI" className="h-[15px] w-auto" />
+        </a>
+        <span className="h-3.5 w-px bg-ink-700" />
+        <span className="font-[family-name:var(--font-display)] text-[13px] text-ink-200">
+          Real-Time Dictation Tester
+        </span>
+        <a
+          href="https://www.assemblyai.com/docs/speech-to-text/universal-streaming"
+          target="_blank"
+          rel="noreferrer"
+          className="ml-auto text-[11px] text-ink-400 underline-offset-2 hover:text-accent hover:underline"
+        >
+          Docs
+        </a>
+      </div>
+
+      {/* Report header */}
+      <header className="flex shrink-0 items-center gap-4 border-b border-ink-800 bg-ink-900 px-4 py-2">
         <div className="min-w-0">
           <h1 className="truncate text-[15px] font-semibold text-ink-100">DOE, JANE A</h1>
           <p className="font-mono text-[10px] text-ink-400">
@@ -189,11 +200,11 @@ export default function Page() {
         <div className="flex items-center gap-2 border-l border-ink-700 pl-4">
           <span className="h-2 w-2 rounded-full bg-accent" />
           <span className="truncate text-[12px] text-ink-200">CT ABD PELVIS W CONT</span>
-          <span className="rounded bg-ink-750 px-1.5 py-0.5 font-mono text-[10px] text-ink-400">
+          <span className="rounded-md bg-ink-800 px-1.5 py-0.5 font-mono text-[10px] text-ink-400">
             ACC SAMPLE-0001
           </span>
           <span
-            className="rounded bg-warn/15 px-1.5 py-0.5 font-mono text-[10px] text-warn"
+            className="rounded-md bg-warn/12 px-1.5 py-0.5 font-mono text-[10px] text-warn"
             title="No real patient data is used anywhere in this project."
           >
             SAMPLE DATA
@@ -213,12 +224,12 @@ export default function Page() {
             className={`flex items-center gap-2 rounded-md px-4 py-2 text-[12px] font-semibold transition ${
               isLive
                 ? "bg-live text-white hover:brightness-110"
-                : "bg-ink-750 text-ink-100 ring-1 ring-ink-600 hover:bg-ink-700"
+                : "bg-accent-dim text-white hover:bg-accent-deep"
             }`}
           >
             <span
               className={`h-2.5 w-2.5 rounded-full ${
-                isLive ? "rec-dot bg-white" : "bg-live"
+                isLive ? "rec-dot bg-white" : "bg-white/80"
               }`}
             />
             {active.status === "connecting"
@@ -235,11 +246,9 @@ export default function Page() {
 
         {/* Centre column */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex shrink-0 items-center gap-3 border-b border-ink-800 bg-ink-900/60 px-4 py-1.5">
-            <span className="rounded bg-accent/15 px-2 py-0.5 font-mono text-[10px] text-accent">
-              {engine === "streaming"
-                ? `${streamingParams.deliveryMode} · ${streamingParams.mode}`
-                : `dictation · ${dictationParams.chunking}`}
+          <div className="flex shrink-0 items-center gap-3 border-b border-ink-800 bg-ink-850/70 px-4 py-1.5">
+            <span className="rounded-md bg-accent-soft px-2 py-0.5 font-mono text-[10px] text-accent">
+              {`${streamingParams.deliveryMode} · ${streamingParams.mode}`}
             </span>
             <span className="font-mono text-[10px] text-ink-500">Template: test template</span>
 
@@ -293,7 +302,7 @@ export default function Page() {
           </div>
 
           {active.error && (
-            <div className="shrink-0 border-b border-live/30 bg-live/10 px-4 py-1.5 font-mono text-[11px] text-live">
+            <div className="shrink-0 border-b border-live/30 bg-live/8 px-4 py-1.5 font-mono text-[11px] text-live">
               {active.error}
             </div>
           )}
@@ -303,15 +312,15 @@ export default function Page() {
             activeField={activeField}
             onActivate={selectField}
             onEdit={(id, value) => setFields((prev) => ({ ...prev, [id]: value }))}
-            live={engine === "streaming" ? streaming.live : { preview: "" }}
-            recording={engine === "streaming" && isLive}
+            live={streaming.live}
+            recording={isLive}
             showStability={showStability}
           />
 
           <ScriptPanel />
 
           {/* Report actions */}
-          <div className="flex shrink-0 items-center gap-2 border-t border-ink-800 bg-ink-900/60 px-4 py-2">
+          <div className="flex shrink-0 items-center gap-2 border-t border-ink-800 bg-ink-850/70 px-4 py-2">
             <button
               onClick={() => setFields(emptyReport())}
               className="text-[11px] text-live/80 hover:text-live"
@@ -321,11 +330,6 @@ export default function Page() {
             <button className="rounded border border-ink-600 px-3 py-1 text-[11px] text-ink-200 hover:bg-ink-800">
               Draft
             </button>
-            {engine === "dictation" && dictation.inFlight > 0 && (
-              <span className="font-mono text-[10px] text-warn">
-                {dictation.inFlight} clip{dictation.inFlight > 1 ? "s" : ""} in flight
-              </span>
-            )}
             <label className="ml-auto flex cursor-pointer items-center gap-2 text-[11px] text-ink-300">
               Critical Result
               <input type="checkbox" className="accent-[var(--color-accent)]" />
@@ -341,9 +345,9 @@ export default function Page() {
               <div
                 onMouseDown={startResize}
                 title="Drag to resize"
-                className="group h-1.5 shrink-0 cursor-row-resize bg-transparent hover:bg-accent/30"
+                className="group h-1.5 shrink-0 cursor-row-resize bg-transparent hover:bg-accent/25"
               >
-                <div className="mx-auto mt-0.5 h-0.5 w-8 rounded bg-ink-700 group-hover:bg-accent" />
+                <div className="mx-auto mt-0.5 h-0.5 w-8 rounded bg-ink-600 group-hover:bg-accent" />
               </div>
             )}
 
@@ -364,7 +368,7 @@ export default function Page() {
                   }}
                   className={`rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider transition ${
                     panelOpen && bottomTab === tab
-                      ? "bg-ink-750 text-ink-100"
+                      ? "bg-ink-800 text-ink-200"
                       : "text-ink-500 hover:text-ink-300"
                   }`}
                 >
@@ -372,20 +376,14 @@ export default function Page() {
                 </button>
               ))}
               <span className="ml-auto self-center px-2 font-mono text-[10px] text-ink-600">
-                {engine === "streaming"
-                  ? "wss://streaming.assemblyai.com/v3/ws"
-                  : "POST dictation.assemblyai.com/transcribe"}
+                wss://streaming.assemblyai.com/v3/ws
               </span>
             </div>
 
             {panelOpen && (
               <div className="min-h-0 flex-1 overflow-y-auto">
                 {bottomTab === "metrics" ? (
-                  engine === "streaming" ? (
-                    <StreamingMetrics metrics={streaming.metrics} />
-                  ) : (
-                    <DictationMetricsView metrics={dictation.metrics} />
-                  )
+                  <StreamingMetrics metrics={streaming.metrics} />
                 ) : (
                   <EventLog log={active.log} />
                 )}
@@ -395,17 +393,13 @@ export default function Page() {
         </div>
 
         {/* Parameter panel */}
-        <aside className="flex w-[340px] shrink-0 flex-col border-l border-ink-800 bg-ink-850">
+        <aside className="flex w-[340px] shrink-0 flex-col border-l border-ink-800 bg-ink-900">
           <ParamPanel
-            engine={engine}
-            onEngineChange={setEngine}
             streaming={streamingParams}
             onStreamingChange={setStreamingParams}
-            dictation={dictationParams}
-            onDictationChange={setDictationParams}
             punctuation={punctuation}
             onPunctuationChange={setPunctuation}
-            live={engine === "streaming" && isLive}
+            live={isLive}
             onApplyMidStream={streaming.applyMidStream}
             onForceEndpoint={streaming.forceEndpoint}
           />

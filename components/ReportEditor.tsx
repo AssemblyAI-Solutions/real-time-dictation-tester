@@ -33,7 +33,10 @@ export function ReportEditor({
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="mx-auto max-w-3xl px-6 py-4">
-        <div className="rounded-md border-2 border-accent-dim/60 bg-ink-900/70 p-4">
+        <div
+          data-report-card
+          className="rounded-xl border border-ink-700 bg-ink-900 p-5"
+        >
           <div className="space-y-1">
             {REPORT_TEMPLATE.map((field) => {
               if (field.header) {
@@ -54,14 +57,18 @@ export function ReportEditor({
               return (
                 <div
                   key={field.id}
+                  // Stable hooks for the benchmarks, so restyling cannot
+                  // silently break them into reporting zero.
+                  data-field={field.id}
+                  data-field-label={field.label}
                   ref={isActive ? activeRef : undefined}
                   onClick={() => onActivate(field.id)}
                   className={`group cursor-text rounded px-2 py-1 transition ${
                     field.indent ? "ml-0" : ""
                   } ${
                     isActive
-                      ? "bg-accent/8 ring-1 ring-accent-dim/70"
-                      : "hover:bg-ink-850/70"
+                      ? "bg-accent-soft/50 ring-1 ring-accent-dim"
+                      : "hover:bg-ink-850"
                   }`}
                 >
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">

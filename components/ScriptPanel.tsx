@@ -9,7 +9,7 @@ export function ScriptPanel() {
   const script = TEST_SCRIPTS.find((s) => s.id === id) ?? TEST_SCRIPTS[0];
 
   return (
-    <div className="shrink-0 border-t border-ink-800 bg-ink-900/40">
+    <div className="shrink-0 border-t border-ink-800 bg-ink-850/60">
       <div className="flex items-center gap-2 px-4 py-1.5">
         <button
           onClick={() => setOpen((o) => !o)}
@@ -40,7 +40,7 @@ export function ScriptPanel() {
             <span className="text-warn/90">{script.how}</span> {script.purpose}
           </p>
           {script.steps ? (
-            <ol className="max-h-40 space-y-0.5 overflow-y-auto rounded border border-ink-700 bg-ink-950/60 px-3 py-2">
+            <ol className="max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-ink-700 bg-ink-900 px-3 py-2">
               {script.steps.map((step, i) => (
                 <li key={step.field} className="flex items-baseline gap-2 text-[14px] leading-relaxed">
                   {i > 0 && (
@@ -59,7 +59,7 @@ export function ScriptPanel() {
               ))}
             </ol>
           ) : (
-            <p className="max-h-24 overflow-y-auto rounded border border-ink-700 bg-ink-950/60 px-3 py-2 text-[14px] leading-relaxed text-ink-100">
+            <p className="max-h-24 overflow-y-auto rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-[14px] leading-relaxed text-ink-100">
               {script.text}
             </p>
           )}

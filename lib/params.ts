@@ -1,11 +1,9 @@
-// Parameter surface for the dictation bench.
+// Parameter surface for the streaming bench.
 // Streaming params mirror the /v3/ws query-parameter contract; dictation params
 // mirror the multipart `config` object on POST dictation.assemblyai.com/transcribe.
 
 import type { PunctuationMode } from "./punctuation";
 import { DEFAULT_GUARD_WORDS } from "./punctuation";
-
-export type Engine = "streaming" | "dictation";
 
 /** Punctuation handling. Shared by both engines, since it is a display concern. */
 export interface PunctuationSettings {
@@ -149,21 +147,6 @@ export interface StreamingParams {
   endpointOnFieldChange: boolean;
 }
 
-export interface DictationParams {
-  chunking: "vad" | "cadence";
-  chunkSilenceMs: number;
-  cadenceMs: number;
-  maxClipMs: number;
-  minClipMs: number;
-  silenceRms: number;
-  language_codes: string[];
-  prompt: string;
-  word_boost: string[];
-  llmEnabled: boolean;
-  llmInstruction: string;
-  useConversationContext: boolean;
-}
-
 export const DEFAULT_STREAMING: StreamingParams = {
   region: "global",
   speech_model: "universal-3-5-pro",
@@ -206,27 +189,6 @@ export const DEFAULT_STREAMING: StreamingParams = {
   fieldSwitchLeadMs: 0,
   snapToSentenceWords: 3,
   endpointOnFieldChange: false,
-};
-
-export const DEFAULT_DICTATION: DictationParams = {
-  chunking: "vad",
-  // Short enough to cut at ordinary gaps between words, so no clip is split
-  // mid-word. Longer values only find sentence boundaries, and during unbroken
-  // speech no gap qualifies — clips then run until maxClipMs.
-  chunkSilenceMs: 120,
-  cadenceMs: 2000,
-  // Backstop, not the normal path. At 15000 a continuous passage went 15s with
-  // nothing on screen.
-  maxClipMs: 6000,
-  minClipMs: 400,
-  silenceRms: 0.012,
-  language_codes: ["en"],
-  prompt:
-    "A radiologist dictating a diagnostic imaging report. Expect anatomy, findings, measurements in millimetres, and terms like adenopathy, hepatic steatosis, and no acute intracranial abnormality.",
-  word_boost: [],
-  llmEnabled: false,
-  llmInstruction: "",
-  useConversationContext: true,
 };
 
 /** Build the /v3/ws query string. Nulls and empties are omitted so the server default applies. */

@@ -1,15 +1,14 @@
-# Real-Time Dictation Bench
+# Real-Time Dictation Tester
 
 A reference implementation for **dictating into a structured, templated report** — the shape of
 application used in radiology reporting, clinical notes, and inspection forms — built on AssemblyAI.
 
-Use it as a starting point for your own dictation UI, and as a bench for tuning the behaviour before
-you commit to it. Both engines run against the same interface so you can compare them directly:
+Use it as a starting point for your own dictation UI, and as a tester for tuning the behaviour
+before you commit to it. It runs on
+**[Universal-3.5 Pro Streaming](https://www.assemblyai.com/docs/streaming)** — a WebSocket session
+returning turn-based results in real time.
 
-- **[Universal-3.5 Pro Streaming](https://www.assemblyai.com/docs/streaming)** — WebSocket, continuous session, turn-based results
-- **[Dictation API](https://www.assemblyai.com/docs/dictation)** — one-shot HTTP, one clip in, one transcript out
-
-Every parameter each service supports is exposed in the UI, so you can try a configuration in
+Every connection parameter the API supports is exposed in the UI, so you can try a configuration in
 seconds instead of editing code.
 
 > No real patient data is used anywhere in this project. The report template and sample header are
@@ -42,35 +41,17 @@ Browser                          Your server                 AssemblyAI
 mic → AudioWorklet → PCM16 ──┐
                              ├── GET /api/token ──────────→  mint temp token
        WebSocket ────────────┴─────────────────────────────→  /v3/ws
-                             └── POST /api/dictate ────────→  /transcribe
 ```
 
 **Keep your API key server-side.** Browsers cannot set headers on a WebSocket, so mint a
 [temporary token](https://www.assemblyai.com/docs/streaming/authenticate-with-a-temporary-token)
 server-side and pass it as the `token` query parameter — see
-[`app/api/token/route.ts`](app/api/token/route.ts). Dictation clips are proxied through
-[`app/api/dictate/route.ts`](app/api/dictate/route.ts), which also sidesteps browser CORS.
+[`app/api/token/route.ts`](app/api/token/route.ts).
 
 **Audio capture** lives in [`public/pcm-worklet.js`](public/pcm-worklet.js) and
 [`lib/audio.ts`](lib/audio.ts). The worklet converts Float32 to 16-bit PCM and emits ~80 ms chunks,
 inside the 50–1000 ms per-message window the streaming API expects. It also computes per-chunk RMS,
 which the client uses for its own voice detection.
-
----
-
-## Choosing an engine
-
-| | Streaming | Dictation |
-|---|---|---|
-| Granularity | word-by-word | one clip at a time |
-| Text appears | while the sentence is still being spoken | after the phrase finishes |
-| Who decides boundaries | the model (turn detection) | your client (clip segmentation) |
-| Best for | live captions, fast feedback while dictating | short utterances, simple integration, exact field boundaries |
-
-**Streaming** gives the fastest feedback. **Dictation** is simpler — one HTTP call, one transcript,
-no partials to reason about — but a clip's text arrives all at once, so it cannot be word-by-word.
-
-Switch between them with the toggle at the top of the parameter panel and compare on your own audio.
 
 ---
 
@@ -127,8 +108,8 @@ on the Latency tab show exactly what you are trading:
 - **Commit lag** — spoken → final, i.e. safe from revision
 
 Partials are still read from the socket; nothing that can change reaches the screen. If your
-requirement is not to *process* partial messages at all, set `include_partial_turns=false` or use the
-Dictation API, which has no partials in its data model.
+requirement is not to *process* partial messages at all, set `include_partial_turns=false` — you then
+fall back to finals-only latency, which the Dead air metric will show you.
 
 ---
 
@@ -187,18 +168,10 @@ words were placed under it, the fields end up interleaved — later audio in an 
 - On the final message, resolve everything with whatever lookahead exists — no more context is
   coming, and deferring there strands the held-back words.
 
-### Dictation routes differently
-
-A clip is a unit of audio your client owns, so a field change simply **closes the current clip**. Use
-a lower length floor than `minClipMs` for switch-triggered cuts: a deliberate switch is a strong
-boundary signal, and without it two quick switches merge the phrases between them.
-
 ### Practical guidance
 
 Field boundaries land most reliably when the speaker **pauses briefly at the switch** — a pause is a
-natural turn boundary. If your users dictate straight through without pausing, Dictation gives the
-more exact boundaries because your client cuts the audio itself. Verify either way with
-`npm run bench:report`.
+natural turn boundary. Verify against your own audio with `npm run bench:report`.
 
 ---
 
@@ -274,35 +247,6 @@ Three details that matter if you implement this yourself:
 
 `npm run test:punctuation` covers all of this and needs no API key.
 
-## Dictation: clip segmentation is your latency budget
-
-Dictation is one-shot HTTP, so your client decides where clips begin and end. That choice, not the
-model, sets how responsive the app feels. Two strategies are implemented in
-[`hooks/useDictation.ts`](hooks/useDictation.ts):
-
-- **`vad`** — cut after `chunkSilenceMs` of local silence. Cuts land in gaps between words, so no clip
-  is split mid-word.
-- **`cadence`** — cut on a fixed clock. Guarantees a rhythm but ignores where the words are, so cuts
-  land mid-word and the fragments transcribe poorly. Included for comparison; prefer `vad`.
-
-Guidance for `vad`:
-
-- **Keep `chunkSilenceMs` short** (around 120 ms). Longer values only find *sentence* boundaries, and
-  during unbroken speech no gap qualifies — clips then run until `maxClipMs` and the screen sits empty
-  until they do.
-- **Treat `maxClipMs` as a backstop**, not the normal path. If it is doing the cutting, your silence
-  threshold is too high.
-- **Set `conversation_context`** from already-dictated text so proper nouns stay consistent across
-  clips.
-
-Shorter clips reduce the wait for the first word and cost more requests; longer clips are cheaper and
-give the model more context per call. The Latency tab reports both bounds — **last-word lag**
-(best case) and **first-word lag** (worst case).
-
-Config fields are documented in the [Dictation API reference](https://www.assemblyai.com/docs/dictation).
-
----
-
 ## Reading the metrics
 
 | Metric | What it tells you |
@@ -325,7 +269,7 @@ the actual messages.
 
 ```bash
 npm run fixtures        # build audio fixtures (macOS, uses `say`)
-npm run bench:fields    # field routing across engines and delivery modes
+npm run bench:fields    # field routing across delivery modes
 npm run bench:report    # a full eleven-field report, pausing vs reading straight through
 npm run bench:latency   # streaming turn cadence and partial timing
 npm run test:punctuation # punctuation layer unit tests (no API key needed)
@@ -352,6 +296,18 @@ compare. **No hypothesis on screen** is the one to start from if committed text 
 
 ---
 
+## Styling
+
+The interface uses AssemblyAI's palette and type scale, defined as tokens at the top of
+[`app/globals.css`](app/globals.css) — cobolt accent, warm off-white ground, and the display and
+body font stacks. Restyle by editing those tokens; nothing else hard-codes a colour.
+
+The brand fonts (`Oceanic Text`, `UN 11ST`) are referenced by stack rather than bundled, so they
+render for anyone who has them and fall back to Georgia and the system sans otherwise.
+
+Report fields carry `data-field` and `data-field-label` attributes. The benchmarks read those rather
+than CSS classes, so restyling cannot quietly break them into reporting zero.
+
 ## Adapting this to your app
 
 - **Your template** — edit `REPORT_TEMPLATE` in [`lib/report.ts`](lib/report.ts). Field ids flow
@@ -372,7 +328,6 @@ compare. **No hypothesis on screen** is the one to start from if committed text 
 
 ```
 app/api/token/route.ts          mints a temporary streaming token
-app/api/dictate/route.ts        proxies one clip to the Dictation API
 lib/params.ts                   parameter surface + /v3/ws query builder
 lib/presets.ts                  complete configurations worth comparing
 lib/metrics.ts                  stability committer + latency maths
@@ -381,7 +336,6 @@ lib/report.ts                   report template + spoken navigation commands
 lib/audio.ts                    mic capture, PCM16, WAV wrapping
 public/pcm-worklet.js           AudioWorklet: Float32 -> PCM16 + RMS
 hooks/useStreaming.ts           WebSocket session, delivery modes, field routing
-hooks/useDictation.ts           clip segmentation, ordered append
 scripts/probe.mjs               streaming turn-cadence probe
 scripts/field-routing-test.mjs  drives the real UI and asserts field routing
 scripts/report-routing-test.mjs full-report routing
