@@ -175,6 +175,77 @@ natural turn boundary. Verify against your own audio with `npm run bench:report`
 
 ---
 
+## Telling the model which section the cursor is in
+
+Routing decides *where text lands*. This decides *what the words are*.
+
+Some terms are homophones belonging to different sections of the same report. Nothing in the audio
+separates them:
+
+| Sounds like | In this section | Means |
+|---|---|---|
+| `ileum` / `ilium` | Abdomen / Pelvis | small bowel / hip bone |
+| `steatosis` / `stenosis` | Liver / Vascular | fatty change / narrowing |
+| `peroneal` / `perineal` | Knee / Pelvis | nerve / region |
+
+The cursor is the only signal that can resolve them, and
+[`UpdateConfiguration`](https://www.assemblyai.com/docs/streaming/updating-configuration-mid-stream)
+is how it reaches the model. On every cursor move, [`hooks/useStreaming.ts`](hooks/useStreaming.ts)
+sends that section's `prompt` and `keyterms_prompt` on the open socket — no reconnect:
+
+```ts
+// noteFieldChange(), on every cursor move
+const context = sectionContextFor(fieldId);   // lib/report.ts
+socket.send(JSON.stringify({
+  type: "UpdateConfiguration",
+  prompt: context.prompt,          // "…dictating the ABDOMEN subsection of FINDINGS: the liver, …"
+  keyterms_prompt: context.keyterms, // ["hepatic steatosis", "ileum", "terminal ileum", …]
+}));
+```
+
+Prompts are **composed from the template**, not hand-written per field. `sectionContextFor` walks up
+to the parent header so an indented field carries its section, so adding a row to `REPORT_TEMPLATE`
+gives it a prompt for free. Add `hint` and `keyterms` to a field to sharpen it.
+
+`prompt` carries *context about the audio* — the study, the section, what gets dictated there. It is
+not an instruction channel: formatting and punctuation directives are
+[not supported](https://www.assemblyai.com/docs/streaming/prompting-and-keyterms) and are ignored.
+
+### What it is worth
+
+`npm run bench:sections` dictates eight sections containing the pairs above, where only the cursor
+says which spelling is right. Four arms over the same audio, 4 runs each — 24 ambiguous terms:
+
+| | no prompt | one static report-level prompt | per-section context | per-section + `ForceEndpoint` |
+|---|---|---|---|---|
+| **Pauses at each switch** | 67% | 67% | 88% | **96%** |
+| **Read straight through** | 67% | 67% | 67% | **83%** |
+
+Three things to take from that:
+
+**A whole-report prompt is worth nothing here.** `static` never beats the baseline. It describes the
+report, which is true everywhere and therefore discriminates nowhere. Only context that *changes with
+the cursor* moves the number.
+
+**An update that lands mid-turn does not reach the words already in that turn.** Reading straight
+through, per-section context on its own scores exactly the baseline — the updates are sent (7 per
+run, confirmed on the wire) and change nothing, because the turn carrying the word was already open
+under the old context.
+
+**So pair it with `endpointOnFieldChange` if your readers run sections together.** Closing the turn
+at the keystroke finalises the previous section under the context that was right for it and opens the
+next one clean. That is the whole gap between 67% and 83% on continuous speech. Order matters:
+`ForceEndpoint` first, *then* `UpdateConfiguration`.
+
+Both are toggles in the parameter panel (`sectionContext`, `endpointOnFieldChange`), and each switch
+is visible in the Wire log.
+
+> Measured on synthetic speech with n=4 runs per arm; streaming varies between runs, so treat the
+> percentages as direction and margin, not precision. Point the fixture at recordings of your own
+> readers before tuning against it.
+
+---
+
 ## Spoken punctuation
 
 Dictation users expect to say the marks: *"the lungs are clear comma the heart is normal period"*.
@@ -271,6 +342,7 @@ the actual messages.
 npm run fixtures        # build audio fixtures (macOS, uses `say`)
 npm run bench:fields    # field routing across delivery modes
 npm run bench:report    # a full eleven-field report, pausing vs reading straight through
+npm run bench:sections  # does per-section context change the words? (needs ASSEMBLYAI_API_KEY)
 npm run bench:latency   # streaming turn cadence and partial timing
 npm run test:punctuation # punctuation layer unit tests (no API key needed)
 ```
@@ -311,7 +383,8 @@ than CSS classes, so restyling cannot quietly break them into reporting zero.
 ## Adapting this to your app
 
 - **Your template** — edit `REPORT_TEMPLATE` in [`lib/report.ts`](lib/report.ts). Field ids flow
-  through routing untouched.
+  through routing untouched. Give a field a `hint` and `keyterms` and its section prompt is composed
+  for you; nothing else needs editing.
 - **Your field navigation** — `selectField()` in [`app/page.tsx`](app/page.tsx) is the single entry
   point for moving the cursor. Wire a foot pedal, mouse, or spoken command to it and routing follows.
 - **Your defaults** — `DEFAULT_STREAMING` and `DEFAULT_DICTATION` in
@@ -332,14 +405,16 @@ lib/params.ts                   parameter surface + /v3/ws query builder
 lib/presets.ts                  complete configurations worth comparing
 lib/metrics.ts                  stability committer + latency maths
 lib/punctuation.ts              spoken punctuation modes, guard words, joining
-lib/report.ts                   report template + spoken navigation commands
+lib/report.ts                   report template, per-section context, spoken navigation
 lib/audio.ts                    mic capture, PCM16, WAV wrapping
 public/pcm-worklet.js           AudioWorklet: Float32 -> PCM16 + RMS
 hooks/useStreaming.ts           WebSocket session, delivery modes, field routing
 scripts/probe.mjs               streaming turn-cadence probe
 scripts/field-routing-test.mjs  drives the real UI and asserts field routing
 scripts/report-routing-test.mjs full-report routing
+scripts/section-context-test.mjs per-section prompting, four arms over the same audio
 scripts/make-fixtures.sh        builds the audio fixtures
+scripts/make-section-fixtures.sh builds the homophone fixture for bench:sections
 scripts/punctuation-test.mts    punctuation unit tests
 ```
 

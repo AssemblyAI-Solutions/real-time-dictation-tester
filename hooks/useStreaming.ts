@@ -10,6 +10,7 @@ import {
   type StreamingParams,
 } from "@/lib/params";
 import { convertSpokenPunctuation } from "@/lib/punctuation";
+import { sectionContextFor } from "@/lib/report";
 import {
   commonPrefixLength,
   EMPTY_METRICS,
@@ -182,6 +183,13 @@ export function useStreaming({ params, punctuation, onCommit, getField }: UseStr
   const now = () => (t0Ref.current ? Date.now() - t0Ref.current : 0);
   const audioNow = () => (audioOriginRef.current ? Date.now() - audioOriginRef.current : 0);
 
+  const addLog = useCallback((kind: LogEntry["kind"], label: string, detail?: string) => {
+    setLog((prev) => {
+      const next = [...prev, { id: ++logSeq, atMs: now(), kind, label, detail }];
+      return next.length > 400 ? next.slice(-400) : next;
+    });
+  }, []);
+
   /** Records that the cursor moved, stamped on the audio timeline. */
   const noteFieldChange = useCallback((fieldId: string) => {
     const entries = timelineRef.current;
@@ -199,16 +207,36 @@ export function useStreaming({ params, punctuation, onCommit, getField }: UseStr
       setMetrics((m) => ({ ...m, forcedEndpoints: m.forcedEndpoints + 1 }));
     }
 
+    // Tell the model which part of the report is now being spoken. This is the
+    // only moment the information exists: the prompt set at connect described
+    // wherever the cursor happened to start, and the report is one session.
+    //
+    // Sent after ForceEndpoint deliberately. The update applies to audio the
+    // server has yet to process, so closing the turn first keeps the words
+    // already spoken in the previous section under the context that was right
+    // for them, and opens the next turn under the new one.
+    if (
+      paramsRef.current.sectionContext &&
+      paramsRef.current.speech_model === "universal-3-5-pro" &&
+      socket?.readyState === WebSocket.OPEN
+    ) {
+      const context = sectionContextFor(fieldId);
+      if (context) {
+        socket.send(
+          JSON.stringify({
+            type: "UpdateConfiguration",
+            prompt: context.prompt,
+            keyterms_prompt: context.keyterms,
+          }),
+        );
+        addLog("sent", `Section context → ${context.path}`, context.prompt);
+        setMetrics((m) => ({ ...m, contextSwitches: m.contextSwitches + 1 }));
+      }
+    }
+
     const at = Math.max(0, audioNow() - paramsRef.current.fieldSwitchLeadMs);
     timelineRef.current = [...entries, { audioMs: at, fieldId, snapped: true }];
-  }, [paramsRef]);
-
-  const addLog = useCallback((kind: LogEntry["kind"], label: string, detail?: string) => {
-    setLog((prev) => {
-      const next = [...prev, { id: ++logSeq, atMs: now(), kind, label, detail }];
-      return next.length > 400 ? next.slice(-400) : next;
-    });
-  }, []);
+  }, [paramsRef, addLog]);
 
   const send = useCallback(
     (payload: Record<string, unknown>, label: string) => {
@@ -545,7 +573,18 @@ export function useStreaming({ params, punctuation, onCommit, getField }: UseStr
       inputLatencyMsRef.current = mic.inputLatencyMs;
       addLog("info", "Microphone open", `${mic.sampleRate} Hz · input latency ~${Math.round(mic.inputLatencyMs)}ms`);
 
-      const query = buildStreamingQuery({ ...p, sample_rate: mic.sampleRate }, tokenBody.token);
+      // Open under the starting field's context. Without this the first section
+      // dictated is the only one that never gets its context, since the first
+      // UpdateConfiguration is not sent until the cursor first moves.
+      const opening = p.sectionContext ? sectionContextFor(getFieldRef.current()) : null;
+      const connectParams = opening
+        ? { ...p, prompt: opening.prompt, keyterms_prompt: opening.keyterms }
+        : p;
+
+      const query = buildStreamingQuery(
+        { ...connectParams, sample_rate: mic.sampleRate },
+        tokenBody.token,
+      );
       const host = REGION_HOSTS[p.region];
       const socket = new WebSocket(`wss://${host}/v3/ws?${query}`);
       socket.binaryType = "arraybuffer";

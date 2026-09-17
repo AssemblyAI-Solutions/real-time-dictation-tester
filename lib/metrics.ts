@@ -14,6 +14,8 @@ export interface Metrics {
   partials: number;
   finals: number;
   forcedEndpoints: number;
+  /** UpdateConfiguration messages sent because the cursor changed section. */
+  contextSwitches: number;
   /** Words that changed on screen after having been rendered. */
   revisedWords: number;
   wordsRendered: number;
@@ -32,6 +34,7 @@ export const EMPTY_METRICS: Metrics = {
   partials: 0,
   finals: 0,
   forcedEndpoints: 0,
+  contextSwitches: 0,
   revisedWords: 0,
   wordsRendered: 0,
   ttft: [],

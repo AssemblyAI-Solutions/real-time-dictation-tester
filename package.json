@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "fixtures": "bash scripts/make-fixtures.sh fixtures",
+    "fixtures": "bash scripts/make-fixtures.sh fixtures && bash scripts/make-section-fixtures.sh fixtures",
     "bench:fields": "node scripts/field-routing-test.mjs",
     "bench:latency": "WAV=fixtures/continuous.wav node scripts/probe.mjs baseline mode=balanced",
     "bench:report": "node scripts/report-routing-test.mjs",
+    "bench:sections": "node scripts/section-context-test.mjs",
     "test:punctuation": "tsx scripts/punctuation-test.mts"
   },
   "dependencies": {

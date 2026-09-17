@@ -137,6 +137,19 @@ export interface StreamingParams {
    */
   snapToSentenceWords: number;
   /**
+   * Push the cursor's section as `prompt` + `keyterms_prompt` whenever the
+   * cursor moves, via UpdateConfiguration on the open socket.
+   *
+   * The model cannot know which part of the report is being spoken, and for
+   * homophones that belong to different sections — ileum/ilium, steatosis/
+   * stenosis, peroneal/perineal — nothing in the audio resolves them. The
+   * cursor is the only signal that can, so this is where it is sent.
+   *
+   * Context set at connect time cannot do this: a report is one session and the
+   * cursor moves throughout it. See `sectionContextFor` in lib/report.ts.
+   */
+  sectionContext: boolean;
+  /**
    * Send ForceEndpoint when the cursor moves, so the server closes the turn at
    * the true audio position of the keystroke.
    *
@@ -188,6 +201,7 @@ export const DEFAULT_STREAMING: StreamingParams = {
   renderPreview: true,
   fieldSwitchLeadMs: 0,
   snapToSentenceWords: 3,
+  sectionContext: true,
   endpointOnFieldChange: false,
 };
 

@@ -94,6 +94,7 @@ export function StreamingMetrics({ metrics: m }: { metrics: Metrics }) {
         <Pill>finals {m.finals}</Pill>
         <Pill>partials {m.partials}</Pill>
         {m.forcedEndpoints > 0 && <Pill tone="accent">forced {m.forcedEndpoints}</Pill>}
+        {m.contextSwitches > 0 && <Pill tone="accent">context {m.contextSwitches}</Pill>}
       </div>
 
       <p className="pt-1 text-[10px] leading-relaxed text-ink-500">

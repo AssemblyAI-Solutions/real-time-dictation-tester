@@ -188,6 +188,34 @@ export function ParamPanel({
               )}
 
               <Toggle
+                label="sectionContext"
+                hint="On every cursor move, send the section the cursor is now in as prompt + keyterms_prompt via UpdateConfiguration."
+                value={s.sectionContext}
+                onChange={(v) => set("sectionContext", v)}
+              />
+              <p className="text-[10px] leading-relaxed text-ink-400">
+                Some terms are homophones that belong to different sections — <em>ileum</em> (small
+                bowel) and <em>ilium</em> (hip bone) are pronounced identically. Nothing in the audio
+                separates them, so the cursor is the only signal that can. With this on, moving into
+                Abdomen or Pelvis sends that section&apos;s vocabulary before the next word arrives.
+                Prompts are built from the template by <code>sectionContextFor</code>, so a new
+                section gets one for free. Watch the Wire log to see each switch.
+              </p>
+              {s.sectionContext && s.speech_model === "universal-3-5-pro" && (
+                <p className="text-[10px] leading-relaxed text-warn/80">
+                  Overrides the prompt and keyterms_prompt set below while it is on. Pair it with
+                  endpointOnFieldChange when readers run sections together: an update that lands
+                  mid-turn does not reach words already inside that turn.
+                </p>
+              )}
+              {s.sectionContext && s.speech_model !== "universal-3-5-pro" && (
+                <p className="text-[10px] leading-relaxed text-warn/80">
+                  <code>prompt</code> is Universal-3.5 Pro only, so this has no effect on the
+                  selected model.
+                </p>
+              )}
+
+              <Toggle
                 label="endpointOnFieldChange"
                 hint="Send ForceEndpoint when the cursor moves, so the server splits the audio at the keystroke."
                 value={s.endpointOnFieldChange}
